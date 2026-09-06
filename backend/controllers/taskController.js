@@ -89,8 +89,11 @@ exports.getTaskById = async (req, res) => {
     }
 
     // Permission check: admin, creator, or assigned user
-    const isCreator = task.creator._id.toString() === req.user._id.toString();
-    const isAssigned = task.assignedUser && task.assignedUser._id.toString() === req.user._id.toString();
+    const creatorId = task.creator?._id ? task.creator._id.toString() : task.creator?.toString();
+    const assignedId = task.assignedUser?._id ? task.assignedUser._id.toString() : task.assignedUser?.toString();
+
+    const isCreator = creatorId === req.user._id.toString();
+    const isAssigned = assignedId === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
 
     if (!isCreator && !isAssigned && !isAdmin) {
@@ -119,8 +122,8 @@ exports.updateTask = async (req, res) => {
     }
 
     // Check permission (creator, assigned user, or admin)
-    const isCreator = task.creator.toString() === req.user._id.toString();
-    const isAssigned = task.assignedUser && task.assignedUser.toString() === req.user._id.toString();
+    const isCreator = task.creator?.toString() === req.user._id.toString();
+    const isAssigned = task.assignedUser?.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
 
     if (!isCreator && !isAssigned && !isAdmin) {
@@ -170,8 +173,8 @@ exports.updateStatus = async (req, res) => {
     }
 
     // Check permission
-    const isCreator = task.creator.toString() === req.user._id.toString();
-    const isAssigned = task.assignedUser && task.assignedUser.toString() === req.user._id.toString();
+    const isCreator = task.creator?.toString() === req.user._id.toString();
+    const isAssigned = task.assignedUser?.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
 
     if (!isCreator && !isAssigned && !isAdmin) {
@@ -209,7 +212,7 @@ exports.assignTask = async (req, res) => {
     }
 
     // Only creator or admin can reassign tasks
-    const isCreator = task.creator.toString() === req.user._id.toString();
+    const isCreator = task.creator?.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
 
     if (!isCreator && !isAdmin) {
@@ -244,7 +247,7 @@ exports.deleteTask = async (req, res) => {
       });
     }
 
-    const isCreator = task.creator.toString() === req.user._id.toString();
+    const isCreator = task.creator?.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
 
     if (!isCreator && !isAdmin) {
