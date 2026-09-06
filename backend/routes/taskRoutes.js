@@ -10,7 +10,9 @@ const {
   updateTask,
   deleteTask,
   updateStatus,
-  assignTask
+  assignTask,
+  addComment,
+  deleteComment
 } = require("../controllers/taskController");
 
 // All task routes require authentication
@@ -23,5 +25,9 @@ router.put("/:id", updateTask);
 router.delete("/:id", deleteTask);
 router.patch("/:id/status", updateStatus);
 router.patch("/:id/assign", assignTask);
+
+// Comments
+router.post("/:id/comments", addComment);
+router.delete("/:id/comments/:commentId", deleteComment);
 
 module.exports = router;

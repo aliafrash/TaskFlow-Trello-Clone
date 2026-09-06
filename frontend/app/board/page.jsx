@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import TaskCard from "@/components/TaskCard";
 import TaskModal from "@/components/TaskModal";
+import TaskDetailModal from "@/components/TaskDetailModal";
 import {
   Plus,
   Search,
@@ -31,6 +32,7 @@ export default function BoardPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [detailTask, setDetailTask] = useState(null);
 
   // Drag and drop state
   const [draggingTaskId, setDraggingTaskId] = useState(null);
@@ -51,6 +53,12 @@ export default function BoardPage() {
       ]);
       setTasks(tasksRes.data);
       setUsers(usersRes.data);
+
+      // Keep detail task in sync if open
+      if (detailTask) {
+        const updated = tasksRes.data.find((t) => t._id === detailTask._id);
+        if (updated) setDetailTask(updated);
+      }
     } catch (err) {
       console.error("Failed to load board data:", err);
     } finally {
@@ -72,6 +80,9 @@ export default function BoardPage() {
   const handleUpdateTask = async (taskData) => {
     const res = await api.put(`/tasks/${editingTask._id}`, taskData);
     setTasks(tasks.map((t) => (t._id === editingTask._id ? res.data : t)));
+    if (detailTask?._id === editingTask._id) {
+      setDetailTask(res.data);
+    }
     setEditingTask(null);
   };
 
@@ -80,6 +91,9 @@ export default function BoardPage() {
       try {
         await api.delete(`/tasks/${taskId}`);
         setTasks(tasks.filter((t) => t._id !== taskId));
+        if (detailTask?._id === taskId) {
+          setDetailTask(null);
+        }
       } catch (err) {
         alert(err.response?.data?.message || "Failed to delete task");
       }
@@ -97,10 +111,29 @@ export default function BoardPage() {
       setTasks((prev) =>
         prev.map((t) => (t._id === taskId ? res.data : t))
       );
+      if (detailTask?._id === taskId) {
+        setDetailTask(res.data);
+      }
     } catch (err) {
       console.error("Status update failed:", err);
       fetchData(); // Revert on failure
     }
+  };
+
+  const handleAddComment = async (taskId, text) => {
+    const res = await api.post(`/tasks/${taskId}/comments`, { text });
+    setTasks((prev) =>
+      prev.map((t) => (t._id === taskId ? res.data : t))
+    );
+    setDetailTask(res.data);
+  };
+
+  const handleDeleteComment = async (taskId, commentId) => {
+    const res = await api.delete(`/tasks/${taskId}/comments/${commentId}`);
+    setTasks((prev) =>
+      prev.map((t) => (t._id === taskId ? res.data : t))
+    );
+    setDetailTask(res.data);
   };
 
   // Drag and Drop handlers
@@ -321,6 +354,7 @@ export default function BoardPage() {
                       task={task}
                       currentUserId={user?.id || user?._id}
                       isAdmin={isAdmin}
+                      onViewDetails={(t) => setDetailTask(t)}
                       onEdit={(t) => {
                         setEditingTask(t);
                         setIsModalOpen(true);
@@ -352,6 +386,23 @@ export default function BoardPage() {
         onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
         initialData={editingTask}
         users={users}
+      />
+
+      {/* Task Detail & Comments Modal */}
+      <TaskDetailModal
+        isOpen={!!detailTask}
+        onClose={() => setDetailTask(null)}
+        task={detailTask}
+        currentUserId={user?.id || user?._id}
+        isAdmin={isAdmin}
+        onAddComment={handleAddComment}
+        onDeleteComment={handleDeleteComment}
+        onEdit={(t) => {
+          setEditingTask(t);
+          setIsModalOpen(true);
+        }}
+        onDelete={handleDeleteTask}
+        onStatusChange={handleStatusChange}
       />
     </div>
   );

@@ -56,7 +56,50 @@ const taskSchema = new mongoose.Schema(
     dueDate:{
         type:Date,
         default:null
-    }
+    },
+
+
+    comments:[
+        {
+            user:{
+                type:mongoose.Schema.Types.ObjectId,
+                ref:"User",
+                required:true
+            },
+            text:{
+                type:String,
+                required:true,
+                trim:true
+            },
+            createdAt:{
+                type:Date,
+                default:Date.now
+            }
+        }
+    ],
+
+
+    activities:[
+        {
+            user:{
+                type:mongoose.Schema.Types.ObjectId,
+                ref:"User",
+                required:true
+            },
+            action:{
+                type:String,
+                required:true
+            },
+            details:{
+                type:String,
+                required:true
+            },
+            createdAt:{
+                type:Date,
+                default:Date.now
+            }
+        }
+    ]
 
 
 },

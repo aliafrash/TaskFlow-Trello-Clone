@@ -163,6 +163,21 @@ async function runTests() {
     failed++;
   }
 
+  // Test 9: addComment rejects empty text
+  try {
+    const req = { body: { text: "   " }, params: { id: "task123" }, user: { _id: "user123" } };
+    const res = createMockRes();
+    await taskController.addComment(req, res);
+
+    assert.strictEqual(res.statusCode, 400);
+    assert.ok(res.data.message.includes("Comment text cannot be empty"));
+    console.log("✓ Test 9 Passed: addComment validates non-empty comment text");
+    passed++;
+  } catch (err) {
+    console.error("✗ Test 9 Failed:", err.message);
+    failed++;
+  }
+
   console.log(`\nResults: ${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);
 }
