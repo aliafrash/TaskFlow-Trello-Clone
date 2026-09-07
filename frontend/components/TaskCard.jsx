@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   Flag,
   MessageSquare,
+  UserPlus,
 } from "lucide-react";
 
 export default function TaskCard({
@@ -17,6 +18,7 @@ export default function TaskCard({
   onDelete,
   onStatusChange,
   onViewDetails,
+  onAssignToMe,
   currentUserId,
   isAdmin,
 }) {
@@ -122,7 +124,16 @@ export default function TaskCard({
               <span className="max-w-[85px] truncate">{task.assignedUser.name}</span>
             </div>
           ) : (
-            <span className="text-[11px] text-gray-400 italic">Unassigned</span>
+            <div onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={() => onAssignToMe && onAssignToMe(task._id)}
+                title="Assign to myself"
+                className="inline-flex items-center space-x-1 text-[11px] font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full transition-colors"
+              >
+                <UserPlus className="w-3 h-3" />
+                <span>Claim</span>
+              </button>
+            </div>
           )}
         </div>
 

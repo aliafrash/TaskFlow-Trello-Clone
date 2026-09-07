@@ -9,6 +9,8 @@ export default function TaskModal({
   onSubmit,
   initialData = null,
   users = [],
+  currentUser = null,
+  isAdmin = false,
 }) {
   const [formData, setFormData] = useState({
     title: "",
@@ -74,6 +76,8 @@ export default function TaskModal({
       setSubmitting(false);
     }
   };
+
+  const currentUserId = currentUser?._id || currentUser?.id;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
@@ -176,18 +180,33 @@ export default function TaskModal({
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
                 Assignee
               </label>
-              <select
-                value={formData.assignedUser}
-                onChange={(e) => setFormData({ ...formData, assignedUser: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-              >
-                <option value="">Unassigned</option>
-                {users.map((u) => (
-                  <option key={u._id} value={u._id}>
-                    {u.name} ({u.email})
-                  </option>
-                ))}
-              </select>
+              {isAdmin ? (
+                <select
+                  value={formData.assignedUser}
+                  onChange={(e) => setFormData({ ...formData, assignedUser: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((u) => (
+                    <option key={u._id} value={u._id}>
+                      {u.name} ({u.email})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <select
+                  value={formData.assignedUser}
+                  onChange={(e) => setFormData({ ...formData, assignedUser: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                >
+                  <option value="">Unassigned</option>
+                  {currentUserId && (
+                    <option value={currentUserId}>
+                      {currentUser?.name || "Me"} (Assign to Me)
+                    </option>
+                  )}
+                </select>
+              )}
             </div>
           </div>
 

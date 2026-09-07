@@ -15,12 +15,14 @@ import {
   Clock,
   ListTodo,
   Loader2,
+  UserPlus,
 } from "lucide-react";
 
 export default function TaskDetailModal({
   isOpen,
   onClose,
   task,
+  users = [],
   currentUserId,
   isAdmin,
   onAddComment,
@@ -28,6 +30,8 @@ export default function TaskDetailModal({
   onEdit,
   onDelete,
   onStatusChange,
+  onAssignToMe,
+  onReassign,
 }) {
   const [activeTab, setActiveTab] = useState("comments");
   const [commentText, setCommentText] = useState("");
@@ -79,7 +83,6 @@ export default function TaskDetailModal({
 
   const comments = task.comments || [];
   const activities = (task.activities || []).slice().reverse(); // newest first
-
   const StatusIcon = statusIcons[task.status] || ListTodo;
 
   return (
@@ -149,16 +152,45 @@ export default function TaskDetailModal({
 
           {/* Metadata Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col justify-between">
               <span className="text-[11px] font-semibold text-gray-400 uppercase block mb-1">
                 Assignee
               </span>
-              <div className="flex items-center space-x-1.5 text-xs text-gray-800 font-medium">
-                <User className="w-3.5 h-3.5 text-gray-500" />
-                <span className="truncate">
-                  {task.assignedUser?.name || "Unassigned"}
-                </span>
-              </div>
+              {isAdmin ? (
+                <select
+                  value={
+                    typeof task.assignedUser === "object"
+                      ? task.assignedUser?._id || ""
+                      : task.assignedUser || ""
+                  }
+                  onChange={(e) =>
+                    onReassign && onReassign(task._id, e.target.value || null)
+                  }
+                  className="w-full text-xs bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-800 font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((u) => (
+                    <option key={u._id} value={u._id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              ) : task.assignedUser ? (
+                <div className="flex items-center space-x-1.5 text-xs text-gray-800 font-medium">
+                  <User className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="truncate">
+                    {task.assignedUser?.name || "Assigned User"}
+                  </span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => onAssignToMe && onAssignToMe(task._id)}
+                  className="inline-flex items-center space-x-1 text-xs font-semibold text-blue-600 bg-blue-100/70 hover:bg-blue-100 px-2 py-1 rounded-lg transition-colors w-fit"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Assign to Me</span>
+                </button>
+              )}
             </div>
 
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">

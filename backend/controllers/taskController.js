@@ -28,11 +28,21 @@ exports.createTask = async (req, res) => {
       });
     }
 
+    // Role check: Normal users can only leave unassigned or assign to themselves
+    let targetAssignee = assignedUser || null;
+    if (req.user.role !== "admin" && targetAssignee) {
+      if (targetAssignee.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          message: "Normal users can only assign tasks to themselves"
+        });
+      }
+    }
+
     const task = await Task.create({
-      title,
-      description,
+      title: title.trim(),
+      description: description.trim(),
       creator: req.user._id,
-      assignedUser: assignedUser || null,
+      assignedUser: targetAssignee,
       status: status || "todo",
       priority: priority || "medium",
       dueDate: dueDate || null,
@@ -59,10 +69,12 @@ exports.getTasks = async (req, res) => {
   try {
     let query = {};
 
+    // Normal users see their own created tasks, assigned tasks, or unassigned tasks eligible for claim
     if (req.user.role !== "admin") {
       query.$or = [
         { creator: req.user._id },
-        { assignedUser: req.user._id }
+        { assignedUser: req.user._id },
+        { assignedUser: null }
       ];
     }
 
@@ -96,15 +108,16 @@ exports.getTaskById = async (req, res) => {
       });
     }
 
-    // Permission check: admin, creator, or assigned user
+    // Permission check: admin, creator, assigned user, or unassigned task
     const creatorId = task.creator?._id ? task.creator._id.toString() : task.creator?.toString();
     const assignedId = task.assignedUser?._id ? task.assignedUser._id.toString() : task.assignedUser?.toString();
 
     const isCreator = creatorId === req.user._id.toString();
     const isAssigned = assignedId === req.user._id.toString();
+    const isUnassigned = !task.assignedUser;
     const isAdmin = req.user.role === "admin";
 
-    if (!isCreator && !isAssigned && !isAdmin) {
+    if (!isCreator && !isAssigned && !isUnassigned && !isAdmin) {
       return res.status(403).json({
         message: "Access denied: You are not authorized to view this task"
       });
@@ -129,23 +142,41 @@ exports.updateTask = async (req, res) => {
       });
     }
 
-    // Check permission (creator, assigned user, or admin)
     const isCreator = task.creator?.toString() === req.user._id.toString();
     const isAssigned = task.assignedUser?.toString() === req.user._id.toString();
+    const isUnassigned = !task.assignedUser;
     const isAdmin = req.user.role === "admin";
 
-    if (!isCreator && !isAssigned && !isAdmin) {
+    if (!isCreator && !isAssigned && !isUnassigned && !isAdmin) {
       return res.status(403).json({
         message: "Access denied: You are not authorized to update this task"
       });
     }
 
-    if (req.body.title !== undefined) task.title = req.body.title;
-    if (req.body.description !== undefined) task.description = req.body.description;
+    // Assignment permission check if assignedUser is updated
+    if (req.body.assignedUser !== undefined) {
+      const newAssignee = req.body.assignedUser || null;
+      if (!isAdmin) {
+        // Normal user can only claim an unassigned task to themselves
+        if (task.assignedUser && task.assignedUser.toString() !== newAssignee?.toString()) {
+          return res.status(403).json({
+            message: "Only administrators can reassign tasks between users"
+          });
+        }
+        if (newAssignee && newAssignee.toString() !== req.user._id.toString()) {
+          return res.status(403).json({
+            message: "Normal users can only assign unassigned tasks to themselves"
+          });
+        }
+      }
+      task.assignedUser = newAssignee;
+    }
+
+    if (req.body.title !== undefined) task.title = req.body.title.trim();
+    if (req.body.description !== undefined) task.description = req.body.description.trim();
     if (req.body.status !== undefined) task.status = req.body.status;
     if (req.body.priority !== undefined) task.priority = req.body.priority;
     if (req.body.dueDate !== undefined) task.dueDate = req.body.dueDate;
-    if (req.body.assignedUser !== undefined) task.assignedUser = req.body.assignedUser || null;
 
     task.activities.push({
       user: req.user._id,
@@ -183,12 +214,12 @@ exports.updateStatus = async (req, res) => {
       });
     }
 
-    // Check permission
     const isCreator = task.creator?.toString() === req.user._id.toString();
     const isAssigned = task.assignedUser?.toString() === req.user._id.toString();
+    const isUnassigned = !task.assignedUser;
     const isAdmin = req.user.role === "admin";
 
-    if (!isCreator && !isAssigned && !isAdmin) {
+    if (!isCreator && !isAssigned && !isUnassigned && !isAdmin) {
       return res.status(403).json({
         message: "Access denied: You are not authorized to update this task's status"
       });
@@ -214,11 +245,10 @@ exports.updateStatus = async (req, res) => {
   }
 };
 
-// Assign Task to User
+// Assign Task (Normal users can only claim unassigned tasks; Admins can reassign between any user)
 exports.assignTask = async (req, res) => {
   try {
     const { assignedUser } = req.body;
-
     const task = await Task.findById(req.params.id);
 
     if (!task) {
@@ -227,28 +257,37 @@ exports.assignTask = async (req, res) => {
       });
     }
 
-    // Only creator or admin can reassign tasks
-    const isCreator = task.creator?.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
+    const targetAssignee = assignedUser || null;
 
-    if (!isCreator && !isAdmin) {
-      return res.status(403).json({
-        message: "Access denied: Only the task creator or an admin can assign tasks"
-      });
+    if (!isAdmin) {
+      // Normal user rules according to assignment spec:
+      // 1. Task must be currently unassigned
+      if (task.assignedUser) {
+        return res.status(403).json({
+          message: "Task is already assigned. Only administrators can reassign tasks across users."
+        });
+      }
+      // 2. Normal user can only assign to themselves
+      if (targetAssignee && targetAssignee.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          message: "Normal users can only assign eligible unassigned tasks to themselves."
+        });
+      }
     }
 
-    task.assignedUser = assignedUser || null;
+    task.assignedUser = targetAssignee;
 
     let assigneeName = "someone";
-    if (assignedUser) {
-      const userDoc = await User.findById(assignedUser);
+    if (targetAssignee) {
+      const userDoc = await User.findById(targetAssignee);
       if (userDoc) assigneeName = userDoc.name;
     }
 
     task.activities.push({
       user: req.user._id,
       action: "assigned",
-      details: assignedUser ? `assigned task to ${assigneeName}` : "unassigned task"
+      details: targetAssignee ? `assigned task to ${assigneeName}` : "unassigned task"
     });
 
     await task.save();

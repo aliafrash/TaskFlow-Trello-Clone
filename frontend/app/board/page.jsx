@@ -120,6 +120,35 @@ export default function BoardPage() {
     }
   };
 
+  const handleAssignToMe = async (taskId) => {
+    try {
+      const myId = user?.id || user?._id;
+      const res = await api.patch(`/tasks/${taskId}/assign`, { assignedUser: myId });
+      setTasks((prev) =>
+        prev.map((t) => (t._id === taskId ? res.data : t))
+      );
+      if (detailTask?._id === taskId) {
+        setDetailTask(res.data);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to claim task");
+    }
+  };
+
+  const handleReassign = async (taskId, targetUserId) => {
+    try {
+      const res = await api.patch(`/tasks/${taskId}/assign`, { assignedUser: targetUserId });
+      setTasks((prev) =>
+        prev.map((t) => (t._id === taskId ? res.data : t))
+      );
+      if (detailTask?._id === taskId) {
+        setDetailTask(res.data);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to reassign task");
+    }
+  };
+
   const handleAddComment = async (taskId, text) => {
     const res = await api.post(`/tasks/${taskId}/comments`, { text });
     setTasks((prev) =>
@@ -192,7 +221,7 @@ export default function BoardPage() {
     },
     {
       id: "doing",
-      title: "In Progress",
+      title: "Doing",
       icon: Clock,
       badgeColor: "bg-amber-50 text-amber-700",
       accentBorder: "border-t-amber-500",
@@ -355,6 +384,7 @@ export default function BoardPage() {
                       currentUserId={user?.id || user?._id}
                       isAdmin={isAdmin}
                       onViewDetails={(t) => setDetailTask(t)}
+                      onAssignToMe={handleAssignToMe}
                       onEdit={(t) => {
                         setEditingTask(t);
                         setIsModalOpen(true);
@@ -386,6 +416,8 @@ export default function BoardPage() {
         onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
         initialData={editingTask}
         users={users}
+        currentUser={user}
+        isAdmin={isAdmin}
       />
 
       {/* Task Detail & Comments Modal */}
@@ -393,10 +425,13 @@ export default function BoardPage() {
         isOpen={!!detailTask}
         onClose={() => setDetailTask(null)}
         task={detailTask}
+        users={users}
         currentUserId={user?.id || user?._id}
         isAdmin={isAdmin}
         onAddComment={handleAddComment}
         onDeleteComment={handleDeleteComment}
+        onAssignToMe={handleAssignToMe}
+        onReassign={handleReassign}
         onEdit={(t) => {
           setEditingTask(t);
           setIsModalOpen(true);
