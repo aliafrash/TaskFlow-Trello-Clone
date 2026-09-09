@@ -12,7 +12,11 @@ const User = require("../models/User");
 const Task = require("../models/Task");
 
 async function seedDatabase() {
-  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URL || "mongodb://127.0.0.1:27017/taskflow";
+  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URL;
+
+  if (!mongoUri) {
+    throw new Error("MONGO_URI or MONGODB_URL must be configured before seeding.");
+  }
 
   console.log("--------------------------------------------------");
   console.log("🌱 Starting TaskFlow Database Seeder");

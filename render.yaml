@@ -3,7 +3,7 @@ services:
     name: taskflow-backend
     runtime: node
     rootDir: backend
-    buildCommand: npm install && npm run seed
+    buildCommand: npm install
     startCommand: npm start
     plan: free
     envVars:
