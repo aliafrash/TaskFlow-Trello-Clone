@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: taskflow-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run seed
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
